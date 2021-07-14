@@ -8,9 +8,9 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
 
-class UserDataModel:
+class CAUserDataModel:
     def __init__(self, gmail):
-        self.id = gmail
+        self.gmail = gmail
         self.public_cert_list = {}  # key: public key, value:certification
         # certification request state
         self.last_verification_code = None
@@ -66,7 +66,7 @@ class CA:
         # self._send_mail(gmail, encrypted_rand_string)
 
         # update user model data
-        user_data_model: UserDataModel = self._users_data.get(gmail, UserDataModel(gmail))
+        user_data_model: CAUserDataModel = self._users_data.get(gmail, CAUserDataModel(gmail))
         self._users_data[gmail] = user_data_model
         user_data_model.last_verification_code = rand_string
         user_data_model.last_public_key_cert_request = user_public_key
@@ -74,7 +74,7 @@ class CA:
         return encrypted_rand_string
 
     def incoming_response_verification_code(self, gmail, verification_code):
-        user_data_model: UserDataModel = self._users_data.get(gmail, None)
+        user_data_model: CAUserDataModel = self._users_data.get(gmail, None)
         if user_data_model:
             if verification_code == user_data_model.last_verification_code:
                 requested_pub_key = user_data_model.last_public_key_cert_request
