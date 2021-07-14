@@ -4,9 +4,9 @@ from OpenSSL import crypto
 class CAUser:
     def __init__(self, gmail):
         self.gmail = gmail
-        self._pri_key = None
-        self._pub_key = None
-        self._cert = None
+        self.pri_key = None
+        self.pub_key = None
+        self.cert = None
 
     def create_keys_and_get_cert(self):
         self._generate_keys()
@@ -17,8 +17,8 @@ class CAUser:
         k = crypto.PKey()
         k.generate_key(crypto.TYPE_RSA, 1024)
 
-        self._pri_key = crypto.dump_privatekey(crypto.FILETYPE_PEM, k).decode("utf-8")
-        self._pub_key = crypto.dump_publickey(crypto.FILETYPE_PEM, k).decode("utf-8")
+        self.pri_key = crypto.dump_privatekey(crypto.FILETYPE_PEM, k).decode("utf-8")
+        self.pub_key = crypto.dump_publickey(crypto.FILETYPE_PEM, k).decode("utf-8")
 
     def _get_certificate_from_ca(self):
         # TODO
