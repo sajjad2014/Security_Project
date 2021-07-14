@@ -40,7 +40,7 @@ class CAUser:
         # TODO
         pass
 
-    def add_auth(self, data, receiver_id, timeout=10):
+    def add_auth(self, data, receiver_id, timeout=20):
         t0 = datetime.datetime.utcnow()
         delta = datetime.timedelta(seconds=timeout)
         t1 = t0 + delta
@@ -71,7 +71,7 @@ class CAUser:
             now = datetime.datetime.utcnow()
             if not (t1 > now > t0) or not (auth_data["receiver"] != self.gmail):
                 raise AuthenticationError()
-            check_sign(sign_value=token["certificate"], signer_pubkey=capubkey,
+            check_sign(sign_value=token["certificate"], signer_pubkey="<capubkey>",
                        data={"id": auth_data['sender'], 'pubkey': auth_data['pubkey']})  # TODO
             return data["data"]
         except Exception as e:
