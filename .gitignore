@@ -1,3 +1,9 @@
 .ipynb_checkpoints/
 __pycache__/
 .idea/
+
+src/CA/ca_private.key
+src/CA/ca_public.key
+src/CA/ca_self_signed_cert.crt
+
+venv/
