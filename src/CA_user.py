@@ -5,6 +5,8 @@ from OpenSSL import crypto
 from cryptography.hazmat.backends.openssl.backend import backend
 from cryptography.hazmat.primitives import serialization
 
+from src.shared_data import SharedData
+
 
 class AuthenticationError(Exception):
     pass
@@ -55,8 +57,10 @@ class CAUser:
         self.pub_key = crypto.dump_publickey(crypto.FILETYPE_PEM, k).decode("utf-8")
 
     def _get_certificate_from_ca(self):
-        # TODO
-        pass
+        ca_url = SharedData.sections_url_address[SharedData.Entities.CA]
+        ca_gmail = SharedData.sections_gmail[SharedData.Entities.CA]
+        # TODO is it right without pub pri keys?
+        self.send_request()
 
     def add_auth(self, data, receiver_id, timeout=20):
         t0 = datetime.datetime.utcnow()
