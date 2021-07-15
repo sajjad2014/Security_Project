@@ -30,7 +30,11 @@ class BlockChain(CAUser):
         policy = data["policy"]
         signature = data["signature"]
         if user_pub_key in self.pub_key_account_pair:
-            bank_pub_key_obj = self.public_key_object(bank_pub_key)
+
+            bank_pub_key_obj = serialization.load_pem_public_key(
+                    bank_pub_key.encode('utf-8'),
+                     backend=backend
+                )
             unsigned_msg = json.dumps({"bank_pub_key": bank_pub_key,
                                        "policy": policy}).encode('utf-8')
             bank_pub_key_obj.verify(

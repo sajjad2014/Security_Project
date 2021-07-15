@@ -1,8 +1,7 @@
-
 import datetime
 import json
 import ssl
-
+import base64
 import requests
 from OpenSSL import crypto
 from cryptography.hazmat.backends.openssl.backend import backend
@@ -22,13 +21,41 @@ TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def sign(key, data):
-    # TODO
-    return "signed-string"
+    data_j = json.dumps(data)
+    private_key = serialization.load_pem_private_key(
+        key.encode('utf-8'),
+        backend=backend,
+        password=None
+    )
+    signature = private_key.sign(
+        data_j.encode('uft-8'),
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH
+        ),
+        hashes.SHA256()
+    )
+    return signature
 
 
 def check_sign(sign_value, signer_pubkey, data):
-    # TODO
-    return True
+    try:
+        data_j = json.dumps(data)
+        pub_key_obj = serialization.load_pem_public_key(
+            signer_pubkey.encode('utf-8'),
+            backend=backend
+        )
+        pub_key_obj.verify(
+            sign_value,
+            data_j.encode('uft-8'),
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256())
+        return True
+    except:
+        return False
 
 
 def server_auth(func):
