@@ -116,3 +116,16 @@ class CAUser:
             sender_func = requests.post
         authenticated_data = self.add_auth(data, receiver_id)
         sender_func(url, json=authenticated_data, verify=True)
+
+    def public_key_object(self, pub_key):
+        return serialization.load_pem_public_key(
+            pub_key.encode('utf-8'),
+            backend=backend
+        )
+
+    def private_key_object(self, pri_key):
+        return serialization.load_pem_private_key(
+            pri_key.encode('utf-8'),
+            backend=backend,
+            password=None
+        )
