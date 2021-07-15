@@ -11,6 +11,10 @@ class User(BankUser):
         self.create_keys_and_get_cert()
         self.register_and_set_pub_for_bank()
 
+        self.last_requested_merchant_account_number = None
+        self.last_requested_item = None
+        self.last_requested_price = None
+
     def send_delegation_rule(self):
         block_chain_url = SharedData.sections_url_address[SharedData.Entities.BlockChain]
         block_chain_gmail = SharedData.sections_gmail[SharedData.Entities.BlockChain]
@@ -32,7 +36,6 @@ class User(BankUser):
                           {"bank_pub_key": bank_pub_key, "user_pub_key": self.pub_key, "policy": policy, "sign": sign})
 
     def confirm_policy(self, user_pub_key, policy):
-        # TODO: what should happen here? nothing
         pass
 
     def send_buy_item_request(self, item):
@@ -40,8 +43,11 @@ class User(BankUser):
         merchant_gmail = SharedData.sections_gmail[SharedData.Entities.Merchant]
         self.send_request(merchant_url, merchant_gmail, {"user_id": self.gmail, "item": item})
 
-    def incoming_buy_item_price(self, merchant_account_number, item, price, time_stamp):
-        pass
+    def incoming_buy_item_price(self, data):
+        self.last_requested_merchant_account_number = data['merchant_bank_id']
+        self.last_requested_item = data['item']
+        self.last_requested_price = data['price']
+        self.authenticate_payment(data['merchant_bank_id'], data['price'])
 
     def authenticate_payment(self, merchant_account_number, price):
         bank_url = SharedData.sections_url_address[SharedData.Entities.Bank]
@@ -51,9 +57,7 @@ class User(BankUser):
                            "merchant_bank_id": merchant_account_number, "price": price, })
 
     def incoming_authenticate_success(self, account_number, merchant_account_number, price):
-        # TODO
         pass
 
     def incoming_confirm_exchange(self, merchant_account_number, user_id, item, price):
-        # TODO
         pass

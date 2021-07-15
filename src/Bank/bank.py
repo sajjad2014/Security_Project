@@ -1,6 +1,6 @@
 import random
 
-from src.CA_user import CAUser
+from src.CA_user import CAUser, server_auth
 from src.shared_data import SharedData
 
 
@@ -60,6 +60,7 @@ class Bank(CAUser):
                 return {"status": "OK", "bank_pub_key": self.pub_key}
         return {}
 
+    @server_auth
     def authenticate_payment(self, gmail, account_number, password, merchant_account_number, price, time_stamp):
         bank_user_data: BankUserDataModel = self._users_data.get(gmail, None)
         if bank_user_data:
@@ -74,6 +75,7 @@ class Bank(CAUser):
         self.send_request(block_chain_url, block_chain_gmail,
                           {"user_pub_key": user_pub_key, "bank_pub_key": self.pub_key, "price": price})
 
+    @server_auth
     def incoming_confirm_exchange_from_block_chain(self, user_pub_key, price):
         user_data_model: BankUserDataModel = self._get_user_data_model_by_pub_key(user_pub_key)
         if user_data_model:

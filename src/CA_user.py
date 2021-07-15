@@ -1,17 +1,13 @@
+import datetime
 import ssl
 
 import requests
 from OpenSSL import crypto
-import datetime
-
-from flask import Flask
-
-import datetime
-
-import requests
-from OpenSSL import crypto
 from cryptography.hazmat.backends.openssl.backend import backend
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from flask import Flask
 
 from src.shared_data import SharedData
 
@@ -70,8 +66,15 @@ class CAUser:
         )
 
     def create_keys_and_get_cert(self):
+
         self._generate_keys()
-        self._get_certificate_from_ca()
+        self.send_initial()
+        self.app.add_url_rule("/receive_code/",
+                              endpoint="/receive_code/", view_func=self.receive_code,
+                              methods=["POST"])
+        self.app.add_url_rule("/receive_cert/",
+                              endpoint="/receive_cert/", view_func=self.receive_cert,
+                              methods=["POST"])
 
     def _generate_keys(self):
         # create a key pair
@@ -81,11 +84,31 @@ class CAUser:
         self.pri_key = crypto.dump_privatekey(crypto.FILETYPE_PEM, k).decode("utf-8")
         self.pub_key = crypto.dump_publickey(crypto.FILETYPE_PEM, k).decode("utf-8")
 
-    def _get_certificate_from_ca(self):
+    def send_initial(self):
         ca_url = SharedData.sections_url_address[SharedData.Entities.CA]
         ca_gmail = SharedData.sections_gmail[SharedData.Entities.CA]
-        # TODO is it right without pub pri keys?
-        self.send_request()
+
+        data = {"gmail": self.gmail, "user_public_key": self.pub_key}
+        requests.post(ca_url, json=data)
+
+    def receive_code(self, data):
+        ver = data['verification']
+        decrypted = self.private_key_object.decrypt(
+            ver.encode('utf-8'),
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        ca_url = SharedData.sections_url_address[SharedData.Entities.CA]
+        ca_gmail = SharedData.sections_gmail[SharedData.Entities.CA]
+
+        requests.post(ca_url, json={"verification": decrypted})
+
+    def receive_cert(self, data):
+        cert = data['cert']
+        self.cert = cert
 
     def _add_auth(self, data, receiver_id, timeout=20):
         t0 = datetime.datetime.utcnow()

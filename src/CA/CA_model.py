@@ -1,11 +1,14 @@
 import os
 import random
 
+import requests
 from OpenSSL import crypto
 from cryptography.hazmat.backends.openssl.backend import backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+
+from src.shared_data import SharedData
 
 
 class CAUserDataModel:
@@ -51,7 +54,9 @@ class CA:
         # fields
         self._users_data = {}  # key:id(gmail), value:UserDataModel
 
-    def incoming_certificate_request(self, gmail: str, user_public_key: str):
+    def incoming_certificate_request(self, data):
+        gmail = data['gmail']
+        user_public_key = data['user_public_key']
         rand_string = self._generate_random_code()
         encrypted_rand_string = self._public_key_object.encrypt(
             rand_string.encode('utf-8'),
@@ -71,31 +76,38 @@ class CA:
         user_data_model.last_verification_code = rand_string
         user_data_model.last_public_key_cert_request = user_public_key
 
+        user_url = SharedData.sections_url_address[SharedData.Entities.User]
+
+        requests.post(user_url, json={"verification": encrypted_rand_string})
         return encrypted_rand_string
 
-    def incoming_response_verification_code(self, gmail, verification_code):
+    def incoming_response_verification_code(self, data):
+        gmail = data['gmail']
+        verification_code = data['verification_code']
         user_data_model: CAUserDataModel = self._users_data.get(gmail, None)
         if user_data_model:
             if verification_code == user_data_model.last_verification_code:
                 requested_pub_key = user_data_model.last_public_key_cert_request
                 cert = self._sign_user_certificate(requested_pub_key, gmail)
                 user_data_model.public_cert_list[requested_pub_key] = cert
-                # self._send_mail(gmail, cert)
+
+                user_url = SharedData.sections_url_address[SharedData.Entities.User]
+                requests.post(user_url, json={"cert": cert})
                 return cert
         return None
 
-    def _send_mail(self, receiver_gmail, message):
-        import smtplib, ssl
-
-        port = 465  # For SSL
-        smtp_server = "smtp.gmail.com"
-
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-            server.login(self._sender_mail, self._sender_password)
-            server.sendmail(self._sender_mail, receiver_gmail, message)
-            print("sent to: ", receiver_gmail)
-            print("message:\n", message)
+    # def _send_mail(self, receiver_gmail, message):
+    #     import smtplib, ssl
+    #
+    #     port = 465  # For SSL
+    #     smtp_server = "smtp.gmail.com"
+    #
+    #     context = ssl.create_default_context()
+    #     with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+    #         server.login(self._sender_mail, self._sender_password)
+    #         server.sendmail(self._sender_mail, receiver_gmail, message)
+    #         print("sent to: ", receiver_gmail)
+    #         print("message:\n", message)
 
     def _sign_user_certificate(self, user_public_key: str, user_mail: str):
         ca_cert = crypto.load_certificate(crypto.FILETYPE_PEM, self._cert)
