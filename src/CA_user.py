@@ -1,7 +1,10 @@
 import requests
 from OpenSSL import crypto
 import datetime
-
+from cryptography.hazmat.backends.openssl.backend import backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
 
 class AuthenticationError(Exception):
     pass
@@ -15,7 +18,6 @@ def sign(key, data):
 def check_sign(sign_value, signer_pubkey, data):
     # TODO
     return True
-
 
 class CAUser:
     def __init__(self, gmail):
@@ -97,3 +99,16 @@ class CAUser:
             sender_func = requests.post
         authenticated_data = self.add_auth(data, receiver_id)
         sender_func(url, json=authenticated_data, verify=True)
+
+    def public_key_object(self, pub_key):
+        return serialization.load_pem_public_key(
+            pub_key.encode('utf-8'),
+            backend=backend
+        )
+
+    def private_key_object(self, pri_key):
+        return serialization.load_pem_private_key(
+            pri_key.encode('utf-8'),
+            backend=backend,
+            password=None
+        )
