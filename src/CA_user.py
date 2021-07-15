@@ -41,7 +41,8 @@ def server_auth(func):
             print(e)
             abort(400)
         try:
-            return jsonify(self._add_auth(func(self, self.remove_auth(data)), self.gmail))
+            data, recierver_id = self.remove_auth(data)
+            return jsonify(self._add_auth(func(self, data, recierver_id), recierver_id))
         except AuthenticationError as e:
             abort(403)
 
@@ -120,6 +121,7 @@ class CAUser:
         t0 = datetime.datetime.utcnow()
         delta = datetime.timedelta(seconds=timeout)
         t1 = t0 + delta
+        print(receiver_id)
         dictionary = {
             "pubkey": self.pub_key,
             "start_time": datetime.datetime.strftime(t0, TIME_FORMAT),
@@ -151,7 +153,7 @@ class CAUser:
                 raise Exception("token invalid")
             check_sign(sign_value=token["certificate"], signer_pubkey="<capubkey>",
                        data={"id": auth_data['sender'], 'pubkey': auth_data['pubkey']})  # TODO
-            return data["data"]
+            return data["data"], token["conn_data"]["sender"]
         except Exception as e:
             print(e)
             raise AuthenticationError()
@@ -163,6 +165,7 @@ class CAUser:
         authenticated_data = self._add_auth(data, receiver_id)
         response = sender_func(url, json=authenticated_data, verify=True)
         if response.status_code == 200:
+            print(response.content)
             return self.remove_auth(json.loads(response.content))
         return response
 
@@ -172,8 +175,8 @@ class CAUser:
         self.app.run(host='127.0.0.1', port=port, debug=True, )
 
     @server_auth
-    def test(self, data):
-        return {"salam": data}
+    def test(self, data, receiver_id):
+        return {"salam": data, "receiver": receiver_id}
 
     def add_endpoint(self, func, endpoint=None, endpoint_name=None):
         self.app.add_url_rule(endpoint, endpoint_name, func, methods=["GET", "POST"])
