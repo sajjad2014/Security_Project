@@ -1,6 +1,7 @@
 import random
 
 from src.CA_user import CAUser
+from src.shared_data import SharedData
 
 
 class BankUserDataModel:
@@ -29,9 +30,6 @@ class Bank(CAUser):
         super(Bank, self).__init__(gmail)
         self.create_keys_and_get_cert()
 
-        # todo set ca_pub_key
-        self.ca_pub_key = None
-
         self._users_data = {}
         self._delegations = []
 
@@ -54,13 +52,13 @@ class Bank(CAUser):
         self._users_data[gmail] = bank_user_data
         return password, account_number
 
-    def register_pub_key(self, gmail, account_number, password, pub_key, cert):
+    def register_pub_key(self, gmail, account_number, password, pub_key):
         bank_user_data: BankUserDataModel = self._users_data.get(gmail, None)
         if bank_user_data:
             if bank_user_data.account_number == account_number and bank_user_data.password == password:
                 bank_user_data.public_key = pub_key
-                return "OK"
-        return "provided informations does not match"
+                return {"status": "OK", "bank_pub_key": self.pub_key}
+        return {}
 
     def authenticate_payment(self, gmail, account_number, password, merchant_account_number, price, time_stamp):
         bank_user_data: BankUserDataModel = self._users_data.get(gmail, None)
@@ -70,12 +68,13 @@ class Bank(CAUser):
                 return account_number, merchant_account_number, price
         return "provided informations does not match"
 
-    def send_exchange_crypto(self, user_pub_key, price, bank_pub_key, time_stamp):
-        # TODO send request to blockchain
+    def send_exchange_crypto(self, user_pub_key, price):
+        block_chain_url = SharedData.sections_url_address[SharedData.Entities.BlockChain]
+        block_chain_gmail = SharedData.sections_gmail[SharedData.Entities.BlockChain]
+        self.send_request(block_chain_url, block_chain_gmail,
+                          {"user_pub_key": user_pub_key, "bank_pub_key": self.pub_key, "price": price})
 
-        pass
-
-    def incoming_confirm_exchange_from_block_chain(self, user_pub_key, price, time_stamp):
+    def incoming_confirm_exchange_from_block_chain(self, user_pub_key, price):
         user_data_model: BankUserDataModel = self._get_user_data_model_by_pub_key(user_pub_key)
         if user_data_model:
             for in_process in user_data_model.in_process_exchange:
@@ -87,6 +86,7 @@ class Bank(CAUser):
         return False
 
     def send_confirm_exchange_to_merchant(self, merchant_account_number, user_id, price):
-        # TODO
-        pass
-
+        merchant_url = SharedData.sections_url_address[SharedData.Entities.Merchant]
+        merchant_gmail = SharedData.sections_gmail[SharedData.Entities.Merchant]
+        self.send_request(merchant_url, merchant_gmail,
+                          {"merchant_bank_id": merchant_account_number, "user_id": user_id, "price": price})
