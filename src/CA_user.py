@@ -1,6 +1,10 @@
+import ssl
+
 import requests
 from OpenSSL import crypto
 import datetime
+
+from flask import Flask
 
 
 class AuthenticationError(Exception):
@@ -17,12 +21,29 @@ def check_sign(sign_value, signer_pubkey, data):
     return True
 
 
+def server_auth(func):
+    def wrapper_func(self):
+        from flask import request, abort, jsonify
+        data = {}
+        try:
+            data = request.get_json()
+        except Exception as e:
+            abort(400)
+        try:
+            return jsonify(func(self.remove_auth(data)))
+        except AuthenticationError as e:
+            abort(403)
+
+    return wrapper_func
+
+
 class CAUser:
     def __init__(self, gmail):
         self.gmail = gmail
         self.pri_key = None
         self.pub_key = None
         self.cert = None
+        self.app = Flask(self.gmail)
 
     def create_keys_and_get_cert(self):
         self._generate_keys()
@@ -40,7 +61,7 @@ class CAUser:
         # TODO
         pass
 
-    def add_auth(self, data, receiver_id, timeout=20):
+    def _add_auth(self, data, receiver_id, timeout=20):
         t0 = datetime.datetime.utcnow()
         delta = datetime.timedelta(seconds=timeout)
         t1 = t0 + delta
@@ -77,23 +98,21 @@ class CAUser:
         except Exception as e:
             raise AuthenticationError()
 
-    def server_auth(self, func):
-        def wrapper_func():
-            from flask import request, abort, jsonify
-            data = {}
-            try:
-                data = request.get_json()
-            except Exception as e:
-                abort(400)
-            try:
-                return jsonify(func(self.remove_auth(data)))
-            except AuthenticationError as e:
-                abort(403)
-        return wrapper_func
-
-    def send_request(self, url, receiver_id, data, method="get"):
+    def send_request(self, url, receiver_id, data, method="post"):
         sender_func = requests.get
         if method.lower() == "post":
             sender_func = requests.post
-        authenticated_data = self.add_auth(data, receiver_id)
+        authenticated_data = self._add_auth(data, receiver_id)
         sender_func(url, json=authenticated_data, verify=True)
+
+    def run(self, port):
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        # context.load_cert_chain(self.cert, self.pri_key)
+        self.app.run(host='127.0.0.1', port=port, debug=True, )
+
+    @server_auth
+    def test(self):
+        return {"salam": "mamad"}
+
+    def add_endpoint(self, func, endpoint=None, endpoint_name=None):
+        self.app.add_url_rule(endpoint, endpoint_name, func)
