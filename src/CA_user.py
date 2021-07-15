@@ -1,3 +1,4 @@
+import json
 import ssl
 
 import requests
@@ -18,6 +19,9 @@ class AuthenticationError(Exception):
     pass
 
 
+TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
 def sign(key, data):
     # TODO
     return "signed-string"
@@ -35,9 +39,10 @@ def server_auth(func):
         try:
             data = request.get_json()
         except Exception as e:
+            print(e)
             abort(400)
         try:
-            return jsonify(self._add_auth(func(self.remove_auth(data)), self.id))
+            return jsonify(self._add_auth(func(self, self.remove_auth(data)), self.gmail))
         except AuthenticationError as e:
             abort(403)
 
@@ -89,8 +94,8 @@ class CAUser:
         t1 = t0 + delta
         dictionary = {
             "pubkey": self.pub_key,
-            "start_time": str(t0),
-            "end_time": str(t1),
+            "start_time": datetime.datetime.strftime(t0, TIME_FORMAT),
+            "end_time": datetime.datetime.strftime(t1, TIME_FORMAT),
             "sender": self.gmail,
             "receiver": receiver_id,
         }
@@ -110,14 +115,17 @@ class CAUser:
             sender_pubkey = token["conn_data"]["pubkey"]
             auth_data = token["conn_data"]
             check_sign(sign_value=token["conn_sign"], data=auth_data, signer_pubkey=sender_pubkey)
-            t0, t1 = auth_data["t0"], auth_data["t1"]
-            now = datetime.datetime.utcnow()
-            if not (t1 > now > t0) or not (auth_data["receiver"] != self.gmail):
-                raise AuthenticationError()
+            t0, t1 = datetime.datetime.strptime(auth_data["start_time"], TIME_FORMAT), \
+                     datetime.datetime.strptime(auth_data["end_time"], TIME_FORMAT)
+            now = datetime.datetime.strptime(datetime.datetime.strftime(datetime.datetime.utcnow(), TIME_FORMAT),
+                                             TIME_FORMAT)
+            if not (t1 >= now >= t0) or (auth_data["receiver"] != self.gmail):
+                raise Exception("token invalid")
             check_sign(sign_value=token["certificate"], signer_pubkey="<capubkey>",
                        data={"id": auth_data['sender'], 'pubkey': auth_data['pubkey']})  # TODO
             return data["data"]
         except Exception as e:
+            print(e)
             raise AuthenticationError()
 
     def send_request(self, url, receiver_id, data, method="post"):
@@ -126,7 +134,9 @@ class CAUser:
             sender_func = requests.post
         authenticated_data = self._add_auth(data, receiver_id)
         response = sender_func(url, json=authenticated_data, verify=True)
-        return self.remove_auth(response)
+        if response.status_code == 200:
+            return self.remove_auth(json.loads(response.content))
+        return response
 
     def run(self, port):
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -134,8 +144,8 @@ class CAUser:
         self.app.run(host='127.0.0.1', port=port, debug=True, )
 
     @server_auth
-    def test(self):
-        return {"salam": "mamad"}
+    def test(self, data):
+        return {"salam": data}
 
     def add_endpoint(self, func, endpoint=None, endpoint_name=None):
-        self.app.add_url_rule(endpoint, endpoint_name, func)
+        self.app.add_url_rule(endpoint, endpoint_name, func, methods=["GET", "POST"])
