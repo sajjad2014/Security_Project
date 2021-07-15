@@ -6,6 +6,9 @@ import datetime
 
 from flask import Flask
 
+from cryptography.hazmat.backends.openssl.backend import backend
+from cryptography.hazmat.primitives import serialization
+
 
 class AuthenticationError(Exception):
     pass
@@ -116,3 +119,16 @@ class CAUser:
 
     def add_endpoint(self, func, endpoint=None, endpoint_name=None):
         self.app.add_url_rule(endpoint, endpoint_name, func)
+
+    def public_key_object(self, pub_key):
+        return serialization.load_pem_public_key(
+            pub_key.encode('utf-8'),
+            backend=backend
+        )
+
+    def private_key_object(self, pri_key):
+        return serialization.load_pem_private_key(
+            pri_key.encode('utf-8'),
+            backend=backend,
+            password=None
+        )
