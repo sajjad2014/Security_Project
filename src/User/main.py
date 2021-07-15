@@ -1,22 +1,20 @@
 from src.User.user import User
+from src.shared_data import SharedData
 
 if __name__ == '__main__':
-    user: User = User("user@gmail.com")
-    # register bank
-    user.register_and_set_pub_for_bank()
+    user: User = User(SharedData.sections_gmail[SharedData.Entities.User])
 
-    # step 1 delegation
-    response = user.send_delegation_rule()
-    user.confirm_policy(response['user_pub_key'], response['policy'])
-
-    # buy item request
-    response = user.send_buy_item_request()
-    user.incoming_buy_item_price(response['merchant_account_number'], response['item'], response['price'],
-                                 response['time_stamp'])
-
-    # authenticate payment
-    # TODO
-    # response = user.authenticate_payment()
-    # user.incoming_authenticate_success()
-
-    # user.incoming_confirm_exchange()
+    # # step 1 delegation
+    # response = user.send_delegation_rule()
+    # user.confirm_policy(response['user_pub_key'], response['policy'])
+    #
+    # # buy item request
+    # response = user.send_buy_item_request("2")
+    # user.add_endpoint(user.incoming_buy_item_price, "/incoming_buy_item_price/",
+    #                   "incoming_buy_item_price")
+    #
+    # user.add_endpoint(user.incoming_authenticate_success, "/incoming_authenticate_success/",
+    #                   "incoming_authenticate_success")
+    # user.add_endpoint(user.incoming_confirm_exchange, "/incoming_confirm_exchange/",
+    #                   "incoming_confirm_exchange")
+    user.run(SharedData.sections_port_address[SharedData.Entities.User])
