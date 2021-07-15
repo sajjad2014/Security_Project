@@ -39,7 +39,7 @@ def server_auth(func):
         except Exception as e:
             abort(400)
         try:
-            return jsonify(func(self.remove_auth(data)))
+            return jsonify(self._add_auth(func(self.remove_auth(data)), self.id))
         except AuthenticationError as e:
             abort(403)
 
@@ -124,27 +124,13 @@ class CAUser:
         except Exception as e:
             raise AuthenticationError()
 
-    def server_auth(self, func):
-        def wrapper_func():
-            from flask import request, abort, jsonify
-            data = {}
-            try:
-                data = request.get_json()
-            except Exception as e:
-                abort(400)
-            try:
-                return jsonify(func(self.remove_auth(data)))
-            except AuthenticationError as e:
-                abort(403)
-
-        return wrapper_func
-
     def send_request(self, url, receiver_id, data, method="post"):
         sender_func = requests.get
         if method.lower() == "post":
             sender_func = requests.post
         authenticated_data = self._add_auth(data, receiver_id)
-        sender_func(url, json=authenticated_data, verify=True)
+        response = sender_func(url, json=authenticated_data, verify=True)
+        return self.remove_auth(response)
 
     def run(self, port):
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -157,16 +143,3 @@ class CAUser:
 
     def add_endpoint(self, func, endpoint=None, endpoint_name=None):
         self.app.add_url_rule(endpoint, endpoint_name, func)
-
-    def public_key_object(self, pub_key):
-        return serialization.load_pem_public_key(
-            pub_key.encode('utf-8'),
-            backend=backend
-        )
-
-    def private_key_object(self, pri_key):
-        return serialization.load_pem_private_key(
-            pri_key.encode('utf-8'),
-            backend=backend,
-            password=None
-        )
