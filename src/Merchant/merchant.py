@@ -1,4 +1,5 @@
 from src.bank_user import BankUser
+from src.shared_data import SharedData
 
 
 class Merchant(BankUser):
@@ -10,17 +11,13 @@ class Merchant(BankUser):
         self.items_price = items_price if items_price else {}  # key:item_name, value:price
         self._customers_item_request = {}
 
-        # todo set ca_pub_key
-        self.ca_pub_key = None
-
-    def buy_item_request(self, user_id, item, time_stamp):
-        # TODO new time_stamp ?
+    def buy_item_request(self, user_id, item):
         self._customers_item_request[user_id] = item
-        return self.bank_account_number, item, self.items_price.get(item, -1), time_stamp
+        return self.bank_account_number, item, self.items_price.get(item, -1)
 
-    def send_item_price(self):
-        # TODO
-        pass
+    def send_item_price(self, user_id, item, price):
+        c_url = SharedData.sections_url_address[SharedData.Entities.User]
+        self.send_request(c_url, user_id, {"merchant_bank_id": self.bank_account_number, "item": item, "price": price})
 
     def incoming_confirm_exchange(self, merchant_bank_id, user_id, price):
         item = self._customers_item_request[user_id]

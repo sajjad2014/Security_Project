@@ -3,10 +3,7 @@ from src.User.user import User
 if __name__ == '__main__':
     user: User = User("user@gmail.com")
     # register bank
-    user.register_to_bank()
-
-    # set pub key for bank
-    user.set_pub_key_in_bank()
+    user.register_and_set_pub_for_bank()
 
     # step 1 delegation
     response = user.send_delegation_rule()

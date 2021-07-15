@@ -1,6 +1,9 @@
+import datetime
+
 import requests
 from OpenSSL import crypto
-import datetime
+from cryptography.hazmat.backends.openssl.backend import backend
+from cryptography.hazmat.primitives import serialization
 
 
 class AuthenticationError(Exception):
@@ -23,6 +26,21 @@ class CAUser:
         self.pri_key = None
         self.pub_key = None
         self.cert = None
+
+    @property
+    def public_key_object(self):
+        return serialization.load_pem_public_key(
+            self.pub_key.encode('utf-8'),
+            backend=backend
+        )
+
+    @property
+    def private_key_object(self):
+        return serialization.load_pem_private_key(
+            self.pri_key.encode('utf-8'),
+            backend=backend,
+            password=None
+        )
 
     def create_keys_and_get_cert(self):
         self._generate_keys()
@@ -89,9 +107,10 @@ class CAUser:
                 return jsonify(func(self.remove_auth(data)))
             except AuthenticationError as e:
                 abort(403)
+
         return wrapper_func
 
-    def send_request(self, url, receiver_id, data, method="get"):
+    def send_request(self, url, receiver_id, data, method="post"):
         sender_func = requests.get
         if method.lower() == "post":
             sender_func = requests.post
