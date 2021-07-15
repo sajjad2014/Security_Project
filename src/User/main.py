@@ -17,4 +17,4 @@ if __name__ == '__main__':
     #                   "incoming_authenticate_success")
     # user.add_endpoint(user.incoming_confirm_exchange, "/incoming_confirm_exchange/",
     #                   "incoming_confirm_exchange")
-    user.run(SharedData.sections_port_address[SharedData.Entities.User])
+    user.run(port=SharedData.sections_port_address[SharedData.Entities.User])
