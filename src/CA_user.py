@@ -28,7 +28,7 @@ def sign(key, data):
         password=None
     )
     signature = private_key.sign(
-        data_j.encode('uft-8'),
+        data_j.encode('utf-8'),
         padding.PSS(
             mgf=padding.MGF1(hashes.SHA256()),
             salt_length=padding.PSS.MAX_LENGTH
@@ -47,7 +47,7 @@ def check_sign(sign_value, signer_pubkey, data):
         )
         pub_key_obj.verify(
             sign_value,
-            data_j.encode('uft-8'),
+            data_j.encode('utf-8'),
             padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
                 salt_length=padding.PSS.MAX_LENGTH
